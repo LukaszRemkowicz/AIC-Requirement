@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  fastappi:
+    image: fastappi
+    build:
+      context: .
+      target: development
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app:/app
+      - postgres:/vol/postgres
+    command: >
+      sh -c "python management.py && 
+      uvicorn app.app_:fastapi_app --host 0.0.0.0 --reload --port 8080"
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    restart: always
+    networks:
+      services-network:
+        aliases:
+          - fastapi
+
+  db:
+    image: postgres:14.1-alpine
+    environment:
+      - DB_HOST=${DB_HOST}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432/tcp"
+    restart: always
+    networks:
+      services-network:
+        aliases:
+          - postgres
+    volumes:
+      - postgres:/vol/postgres
+
+  pgadmin_fastapi:
+    container_name: pgadmin_fastapi
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      services-network:
+        aliases:
+          - pgadmin_fastapi
+
+volumes:
+  postgres:
+    driver: local
+
+networks:
+   services-network:
+     name: services-network
+     driver: bridge
